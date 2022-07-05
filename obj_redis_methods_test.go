@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOps(t *testing.T) {
+func TestOperations(t *testing.T) {
 	pool, errNew := NewCache(context.Background(), _sock1, WithTTL(5))
 	require.NoError(t, errNew)
 
@@ -16,7 +16,7 @@ func TestOps(t *testing.T) {
 		value: []byte("yyy"),
 	}
 
-	require.NoError(t, pool.Set(&dto))
+	require.NoError(t, pool.SetTTL(&dto))
 
 	value, errGet := pool.Get(dto.key)
 	require.NoError(t, errGet)

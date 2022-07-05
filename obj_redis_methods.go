@@ -9,11 +9,11 @@ type DTO struct {
 	value []byte
 }
 
-func (c *InRedisCache) Set(dto *DTO) error {
+func (c *InRedisCache) SetTTL(dto *DTO) error {
 	conn := c.pool.Get()
 	defer conn.Close()
 
-	_, errSet := conn.Do("SET", dto.key, dto.value)
+	_, errSet := conn.Do("SETEX", dto.key, c.secondsTTL, dto.value)
 	return errSet
 }
 
