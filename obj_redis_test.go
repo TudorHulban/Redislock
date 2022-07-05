@@ -27,9 +27,18 @@ func TestRedsync(t *testing.T) {
 
 	mutex := rs.NewMutex("test-redsync")
 
+	dto := DTO{
+		key:   []byte("xxx"),
+		value: []byte("yyy"),
+	}
+
+	caches := NewCaches(pool1, pool2)
+
 	if errLock := mutex.Lock(); errLock != nil {
 		panic(errLock)
 	}
+
+	require.Nil(t, caches.Set(&dto))
 
 	if _, errUnlock := mutex.Unlock(); errUnlock != nil {
 		panic(errUnlock)
