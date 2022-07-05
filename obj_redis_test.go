@@ -40,6 +40,12 @@ func TestRedsync(t *testing.T) {
 
 	require.Nil(t, caches.Set(&dto))
 
+	value, errGet := caches.Get(dto.key)
+	t.Logf("errGet: %#v", errGet)
+	require.Nil(t, errGet)
+	require.NotNil(t, value)
+	require.Equal(t, dto.value, value)
+
 	if _, errUnlock := mutex.Unlock(); errUnlock != nil {
 		panic(errUnlock)
 	}

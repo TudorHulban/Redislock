@@ -36,7 +36,9 @@ func (c *Caches) Get(key []byte) ([]byte, []error) {
 	for _, cache := range *c {
 		conn := cache.pool.Get()
 
-		value, errGet := conn.Do("GET", key)
+		var errGet error
+
+		value, errGet = conn.Do("GET", key)
 		if errGet != nil {
 			errs = append(errs, errGet)
 		}
@@ -48,8 +50,12 @@ func (c *Caches) Get(key []byte) ([]byte, []error) {
 		conn.Close()
 	}
 
-	var buf []byte
-	buf = append(buf, value.([]uint8)...)
+	if value != nil {
+		var buf []byte
+		buf = append(buf, value.([]uint8)...)
 
-	return buf, errs
+		return buf, errs
+	}
+
+	return nil, errs
 }
