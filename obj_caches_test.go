@@ -66,8 +66,13 @@ func TestRedsyncRace(t *testing.T) {
 	rs2 := redsyncredigo.NewPool(&pool2.pool)
 
 	rs := redsync.New(rs1, rs2)
-
 	mutex := rs.NewMutex("test-redsync")
+
+	caches := NewCaches(pool1, pool2)
+	chComm1 := make(chan struct{})
+	defer close(chComm1)
+	chComm2 := make(chan struct{})
+	defer close(chComm2)
 
 	key := []byte("xxx")
 
@@ -81,27 +86,30 @@ func TestRedsyncRace(t *testing.T) {
 		value: []byte("yyy2"),
 	}
 
-	caches := NewCaches(pool1, pool2)
-
-	chComm := make(chan struct{})
-
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
 
-		<-chComm
+		<-chComm1
 
-		errSet := caches.SetTTL(&dtoGoRoutine)
-		if len(errSet) != 0 {
-			for _, err := range errSet {
-				fmt.Println("caches.Set(&dto):", err)
+		errLock := mutex.Lock()
+		if errLock == nil {
+			errSet := caches.SetTTL(&dtoGoRoutine)
+			if len(errSet) != 0 {
+				for _, err := range errSet {
+					fmt.Println("caches.Set(&dto):", err)
+				}
 			}
 		}
 
+		fmt.Println("errLock: ", errLock)
+
 		value, errGet := caches.Get(key)
 		fmt.Println(time.Now().UnixMilli(), "errGet goroutine:", errGet, "value:", string(value))
+
+		chComm2 <- struct{}{}
 
 		t.Log("mutex value: ", string(dtoMutex.value))
 		t.Log("got value: ", string(value))
@@ -112,6 +120,8 @@ func TestRedsyncRace(t *testing.T) {
 		panic(errLock)
 	}
 
+	chComm1 <- struct{}{}
+
 	errSet := caches.SetTTL(&dtoMutex)
 	if len(errSet) != 0 {
 		for _, err := range errSet {
@@ -119,10 +129,10 @@ func TestRedsyncRace(t *testing.T) {
 		}
 	}
 
-	chComm <- struct{}{}
-
 	value, errGet := caches.Get(key)
 	fmt.Println(time.Now().UnixMilli(), "errGet in mutex:", errGet, "value:", string(value))
+
+	<-chComm2
 
 	if _, errUnlock := mutex.Unlock(); errUnlock != nil {
 		panic(errUnlock)
